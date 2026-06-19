@@ -629,8 +629,8 @@ function addToRecentlyViewed(p) {
 }
 
 function renderRecentlyViewed() {
-  const wrap = document.getElementById('recentWrap');
-  const list = document.getElementById('recentList');
+  const wrap = document.getElementById('recentSection'); // HTML id is "recentSection"
+  const list = document.getElementById('recentGrid');    // HTML id is "recentGrid"
   if (!wrap || !list) return;
   if (!recentlyViewed.length) { wrap.classList.add('hidden'); return; }
   wrap.classList.remove('hidden');
@@ -653,7 +653,8 @@ function renderRecentlyViewed() {
 // DARK MODE
 // ============================================================
 function applyDarkMode() {
-  document.documentElement.classList.toggle('dark', isDark);
+  // CSS uses ".dark-mode" on body — not "dark" on <html>
+  document.body.classList.toggle('dark-mode', isDark);
 }
 
 function toggleDarkMode() {
@@ -676,7 +677,7 @@ function showError(show) {
 }
 
 function updateTitle() {
-  const el = document.getElementById('sectionTitle');
+  const el = document.getElementById('productsTitle'); // HTML id is "productsTitle"
   if (!el) return;
   el.textContent = activeCategory === 'ALL'
     ? 'All Products'
@@ -684,7 +685,7 @@ function updateTitle() {
 }
 
 function updateSubtitle(count) {
-  const el = document.getElementById('sectionSubtitle');
+  const el = document.getElementById('productsSubtitle'); // HTML id is "productsSubtitle"
   if (!el) return;
   el.textContent = activeCategory === 'ALL'
     ? `Showing all ${count} products`
@@ -695,18 +696,26 @@ function updateSubtitle(count) {
 // BIND UI EVENTS
 // ============================================================
 function bindUI() {
-  // Search
+  // Search — bind both desktop and mobile inputs to same handler
+  let debounceTimer;
+  const onSearchInput = (input) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      searchQuery = input.value.trim();
+      // Keep both inputs in sync
+      const other = input.id === 'searchInput'
+        ? document.getElementById('searchInputMobile')
+        : document.getElementById('searchInput');
+      if (other && other.value !== input.value) other.value = input.value;
+      applyFiltersAndRender();
+    }, CONFIG.DEBOUNCE_MS);
+  };
+
   const searchInput = document.getElementById('searchInput');
-  if (searchInput) {
-    let debounceTimer;
-    searchInput.addEventListener('input', () => {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        searchQuery = searchInput.value.trim();
-        applyFiltersAndRender();
-      }, CONFIG.DEBOUNCE_MS);
-    });
-  }
+  if (searchInput) searchInput.addEventListener('input', () => onSearchInput(searchInput));
+
+  const searchInputMobile = document.getElementById('searchInputMobile');
+  if (searchInputMobile) searchInputMobile.addEventListener('input', () => onSearchInput(searchInputMobile));
 
   // Filter buttons
   document.querySelectorAll('[data-filter]').forEach(btn => {
@@ -757,9 +766,7 @@ function bindUI() {
   if (wishBtn)   wishBtn.addEventListener('click',  () => { renderWishPanel(); wishPanel.classList.remove('hidden'); });
   if (wishClose) wishClose.addEventListener('click', () => wishPanel.classList.add('hidden'));
 
-  // Retry button
-  const retryBtn = document.getElementById('retryBtn');
-  if (retryBtn) retryBtn.addEventListener('click', initProducts);
+  // Note: retry button uses inline onclick="initProducts()" in HTML — no JS binding needed
 }
 
 // ============================================================
