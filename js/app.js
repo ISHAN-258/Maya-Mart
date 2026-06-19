@@ -635,11 +635,24 @@ function renderRecentlyViewed() {
   if (!recentlyViewed.length) { wrap.classList.add('hidden'); return; }
   wrap.classList.remove('hidden');
   list.innerHTML = recentlyViewed.map(r => `
-    <div class="recent-card" data-id="${escHtml(r.id)}">
-      <img src="${escHtml(r.image)}" alt="${escHtml(r.title)}"
-           onerror="this.src='https://placehold.co/80x80/e8f5e9/1a7a4a?text=?'" />
-      <div class="recent-card-name">${escHtml(r.title)}</div>
-      <div class="recent-card-price">${r.price > 0 ? `₹${r.price}` : '—'}</div>
+    <div class="recent-card" data-id="${escHtml(r.id)}" style="
+      flex-shrink:0;width:130px;background:#fff;border:1.5px solid #e0e8e2;
+      border-radius:12px;overflow:hidden;cursor:pointer;display:flex;
+      flex-direction:column;transition:box-shadow .2s;">
+      <div style="width:130px;height:100px;background:#f9faf9;display:flex;
+                  align-items:center;justify-content:center;overflow:hidden;">
+        <img src="${escHtml(r.image)}" alt="${escHtml(r.title)}"
+             style="width:100%;height:100%;object-fit:contain;padding:6px;"
+             onerror="this.src='https://placehold.co/130x100/e8f5e9/1a7a4a?text=?'" />
+      </div>
+      <div style="padding:8px;flex:1;display:flex;flex-direction:column;gap:3px;">
+        <div style="font-size:.75rem;font-weight:800;color:#1a2b22;line-height:1.3;
+                    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+                    overflow:hidden;">${escHtml(r.title)}</div>
+        <div style="font-size:.78rem;font-weight:800;color:#1a7a4a;">
+          ${r.price > 0 ? `₹${r.price}` : '—'}
+        </div>
+      </div>
     </div>`).join('');
   list.querySelectorAll('.recent-card').forEach(card => {
     card.addEventListener('click', () => {
@@ -818,20 +831,112 @@ function renderCartPanel() {
 
   const sum = cart.reduce((s, i) => s + (i.price * i.qty), 0);
 
-  // Render total + WA button into cartFooter (cartTotal/waOrderBtn don't exist in HTML)
+  // Render total + checkout UI into cartFooter
   if (footer) {
+    // Load saved name/address from localStorage
+    const savedName    = localStorage.getItem('mm_cust_name')    || '';
+    const savedAddress = localStorage.getItem('mm_cust_address') || '';
+
     footer.innerHTML = `
-      <div class="cart-total">
-        Total: <strong>${sum > 0 ? `₹${sum}` : 'Confirm with store'}</strong>
+      <div class="cart-total" style="display:flex;justify-content:space-between;margin-bottom:10px;">
+        <span>Total</span>
+        <strong>${sum > 0 ? `₹${sum}` : 'Confirm with store'}</strong>
       </div>
-      <button class="btn btn-wa btn-full" id="waOrderBtn" style="margin-top:12px">
-        <i class="fa-brands fa-whatsapp"></i> Order via WhatsApp
+      <div style="font-size:.72rem;color:#6b8a74;margin-bottom:10px;">
+        MRP prices. Final amount confirmed by store.
+      </div>
+
+      <!-- Delivery type toggle -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button id="btnDelivery" class="btn btn-primary" style="flex:1;justify-content:center;font-size:.85rem;padding:9px 0;">
+          <i class="fa-solid fa-truck-fast"></i> Home Delivery
+        </button>
+        <button id="btnPickup" class="btn btn-outline" style="flex:1;justify-content:center;font-size:.85rem;padding:9px 0;">
+          <i class="fa-solid fa-store"></i> Store Pickup
+        </button>
+      </div>
+
+      <!-- Name field (always shown) -->
+      <div style="margin-bottom:8px;">
+        <input id="coName" type="text" placeholder="Your name *"
+          value="${escHtml(savedName)}"
+          style="width:100%;padding:9px 12px;border:2px solid #e0e8e2;border-radius:8px;
+                 font-size:.88rem;font-family:inherit;outline:none;background:#f9faf9;color:#1a2b22;" />
+      </div>
+
+      <!-- Address field (shown only for delivery) -->
+      <div id="coAddressWrap" style="margin-bottom:10px;display:none;">
+        <textarea id="coAddress" rows="2" placeholder="Delivery address *"
+          style="width:100%;padding:9px 12px;border:2px solid #e0e8e2;border-radius:8px;
+                 font-size:.88rem;font-family:inherit;outline:none;resize:none;
+                 background:#f9faf9;color:#1a2b22;">${escHtml(savedAddress)}</textarea>
+      </div>
+
+      <button id="waOrderBtn" class="btn btn-wa btn-full" style="margin-top:4px;">
+        <i class="fa-brands fa-whatsapp"></i> Send Order via WhatsApp
       </button>`;
-    document.getElementById('waOrderBtn').addEventListener('click', () => {
+
+    // State: which mode is active
+    let deliveryMode = 'pickup'; // default
+
+    const btnDelivery    = footer.querySelector('#btnDelivery');
+    const btnPickup      = footer.querySelector('#btnPickup');
+    const coAddressWrap  = footer.querySelector('#coAddressWrap');
+    const coName         = footer.querySelector('#coName');
+    const coAddress      = footer.querySelector('#coAddress');
+    const waBtn          = footer.querySelector('#waOrderBtn');
+
+    const setMode = (mode) => {
+      deliveryMode = mode;
+      if (mode === 'delivery') {
+        btnDelivery.className = 'btn btn-primary';
+        btnDelivery.style.cssText = 'flex:1;justify-content:center;font-size:.85rem;padding:9px 0;';
+        btnPickup.className = 'btn btn-outline';
+        btnPickup.style.cssText = 'flex:1;justify-content:center;font-size:.85rem;padding:9px 0;';
+        coAddressWrap.style.display = 'block';
+      } else {
+        btnPickup.className = 'btn btn-primary';
+        btnPickup.style.cssText = 'flex:1;justify-content:center;font-size:.85rem;padding:9px 0;';
+        btnDelivery.className = 'btn btn-outline';
+        btnDelivery.style.cssText = 'flex:1;justify-content:center;font-size:.85rem;padding:9px 0;';
+        coAddressWrap.style.display = 'none';
+      }
+    };
+
+    btnDelivery.addEventListener('click', () => setMode('delivery'));
+    btnPickup.addEventListener('click',   () => setMode('pickup'));
+
+    // Persist name/address on blur
+    coName.addEventListener('blur',    () => localStorage.setItem('mm_cust_name',    coName.value.trim()));
+    coAddress.addEventListener('blur', () => localStorage.setItem('mm_cust_address', coAddress.value.trim()));
+
+    waBtn.addEventListener('click', () => {
+      const name    = coName.value.trim();
+      const address = coAddress ? coAddress.value.trim() : '';
+
+      if (!name) {
+        coName.style.borderColor = '#e53935';
+        coName.focus();
+        return;
+      }
+      if (deliveryMode === 'delivery' && !address) {
+        coAddress.style.borderColor = '#e53935';
+        coAddress.focus();
+        return;
+      }
+
+      // Save to localStorage for next visit
+      localStorage.setItem('mm_cust_name', name);
+      if (deliveryMode === 'delivery') localStorage.setItem('mm_cust_address', address);
+
       const lines = cart.map(i =>
         `• ${i.title} × ${i.qty}${i.price > 0 ? ` = ₹${i.price * i.qty}` : ''}`
       ).join('\n');
-      const msg = `Hello Maya Mart! 🛒\n\nMy Order:\n${lines}\n\n${sum > 0 ? `Total: ₹${sum}` : 'Please confirm prices.'}\n\nName: \nAddress: `;
+
+      const orderType = deliveryMode === 'delivery' ? 'Home Delivery' : 'Store Pickup';
+      const addrLine  = deliveryMode === 'delivery' ? `\nAddress: ${address}` : '';
+
+      const msg = `Hello Maya Mart! 🛒\n\nOrder Type: ${orderType}\nName: ${name}${addrLine}\n\nMy Order:\n${lines}\n\n${sum > 0 ? `Total (MRP): ₹${sum}` : 'Please confirm prices.'}`;
       window.open(`https://wa.me/${CONFIG.WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
     });
   }
