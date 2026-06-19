@@ -589,10 +589,12 @@ function saveCart() {
 
 function renderCartBadge() {
   const total = cart.reduce((s, i) => s + i.qty, 0);
-  document.querySelectorAll('.cart-badge').forEach(el => {
+  // HTML uses id="cartCount", not class="cart-badge"
+  const el = document.getElementById('cartCount');
+  if (el) {
     el.textContent = total;
     el.classList.toggle('hidden', total === 0);
-  });
+  }
 }
 
 // ============================================================
@@ -607,10 +609,12 @@ function toggleWishlist(p) {
 }
 
 function renderWishlistBadge() {
-  document.querySelectorAll('.wish-badge').forEach(el => {
+  // HTML uses id="wishlistCount", not class="wish-badge"
+  const el = document.getElementById('wishlistCount');
+  if (el) {
     el.textContent = wishlist.length;
     el.classList.toggle('hidden', wishlist.length === 0);
-  });
+  }
 }
 
 // ============================================================
@@ -739,17 +743,17 @@ function bindUI() {
     if (e.target === qvOverlay) closeQuickView();
   });
 
-  // Cart panel
+  // Cart panel — HTML ids: cartBtn, cartOverlay, cartClose
   const cartBtn   = document.getElementById('cartBtn');
-  const cartPanel = document.getElementById('cartPanel');
+  const cartPanel = document.getElementById('cartOverlay');
   const cartClose = document.getElementById('cartClose');
   if (cartBtn)   cartBtn.addEventListener('click',  () => { renderCartPanel(); cartPanel.classList.remove('hidden'); });
   if (cartClose) cartClose.addEventListener('click', () => cartPanel.classList.add('hidden'));
 
-  // Wishlist panel
-  const wishBtn   = document.getElementById('wishBtn');
-  const wishPanel = document.getElementById('wishPanel');
-  const wishClose = document.getElementById('wishClose');
+  // Wishlist panel — HTML ids: wishlistBtn, wishlistOverlay, wishlistClose
+  const wishBtn   = document.getElementById('wishlistBtn');
+  const wishPanel = document.getElementById('wishlistOverlay');
+  const wishClose = document.getElementById('wishlistClose');
   if (wishBtn)   wishBtn.addEventListener('click',  () => { renderWishPanel(); wishPanel.classList.remove('hidden'); });
   if (wishClose) wishClose.addEventListener('click', () => wishPanel.classList.add('hidden'));
 
@@ -762,8 +766,8 @@ function bindUI() {
 // CART PANEL RENDER
 // ============================================================
 function renderCartPanel() {
-  const list  = document.getElementById('cartList');
-  const total = document.getElementById('cartTotal');
+  const list   = document.getElementById('cartItems');   // was 'cartList' — doesn't exist
+  const footer = document.getElementById('cartFooter');
   if (!list) return;
 
   if (!cart.length) {
@@ -771,7 +775,7 @@ function renderCartPanel() {
       <i class="fa-solid fa-cart-shopping" style="font-size:2rem;margin-bottom:8px;display:block"></i>
       Your cart is empty
     </div>`;
-    if (total) total.textContent = '₹0';
+    if (footer) footer.innerHTML = '';
     return;
   }
 
@@ -806,17 +810,23 @@ function renderCartPanel() {
   });
 
   const sum = cart.reduce((s, i) => s + (i.price * i.qty), 0);
-  if (total) total.textContent = sum > 0 ? `₹${sum}` : 'Confirm with store';
 
-  const waBtn = document.getElementById('waOrderBtn');
-  if (waBtn) {
-    waBtn.onclick = () => {
+  // Render total + WA button into cartFooter (cartTotal/waOrderBtn don't exist in HTML)
+  if (footer) {
+    footer.innerHTML = `
+      <div class="cart-total">
+        Total: <strong>${sum > 0 ? `₹${sum}` : 'Confirm with store'}</strong>
+      </div>
+      <button class="btn btn-wa btn-full" id="waOrderBtn" style="margin-top:12px">
+        <i class="fa-brands fa-whatsapp"></i> Order via WhatsApp
+      </button>`;
+    document.getElementById('waOrderBtn').addEventListener('click', () => {
       const lines = cart.map(i =>
         `• ${i.title} × ${i.qty}${i.price > 0 ? ` = ₹${i.price * i.qty}` : ''}`
       ).join('\n');
       const msg = `Hello Maya Mart! 🛒\n\nMy Order:\n${lines}\n\n${sum > 0 ? `Total: ₹${sum}` : 'Please confirm prices.'}\n\nName: \nAddress: `;
       window.open(`https://wa.me/${CONFIG.WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
-    };
+    });
   }
 }
 
@@ -824,7 +834,7 @@ function renderCartPanel() {
 // WISHLIST PANEL RENDER
 // ============================================================
 function renderWishPanel() {
-  const list = document.getElementById('wishList');
+  const list = document.getElementById('wishlistItems');  // was 'wishList' — doesn't exist
   if (!list) return;
 
   if (!wishlist.length) {
