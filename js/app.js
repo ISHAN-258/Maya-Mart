@@ -348,7 +348,7 @@ function createProductCard(p) {
 
   const card = document.createElement('div');
   card.className = 'product-card';
-  // Use data attribute instead of relying on CSS.escape
+  // data-id holds the raw id; CSS.escape makes the selector safe
   card.setAttribute('data-id', p.id);
 
   card.innerHTML = `
@@ -423,9 +423,10 @@ function bindStepperEvents(card, p) {
   if (plus)  plus.addEventListener('click',  () => { changeCartQty(p.id,  1); refreshCard(p.id); });
 }
 
-// FIX: use attribute selector instead of CSS.escape
 function refreshCard(id) {
-  const card = document.querySelector(`.product-card[data-id="${id}"]`);
+  // CSS.escape makes the attribute selector safe for ids with special chars
+  // (quotes, brackets, slashes, etc.) that would otherwise break the selector string
+  const card = document.querySelector(`.product-card[data-id="${CSS.escape(id)}"]`);
   if (!card) return;
   const p = allProducts.find(x => x.id === id);
   if (!p) return;
