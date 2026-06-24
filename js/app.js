@@ -1,12 +1,14 @@
 /* =============================================
-   MAYA MART – app.js  v5
-   All improvements: toast, remove from cart, tap-outside,
-   wishlist→cart, search count, sticky mobile bar,
-   empty states, right-aligned cart stepper, fixed m/* =============================================
-   MAYA MART – app.js  v5
-   All improvements: toast, remove from cart, tap-outside,
-   wishlist→cart, search count, sticky mobile bar,
-   empty states, right-aligned cart stepper, fixed map
+   MAYA MART – app.js  v6
+   Changes: localStorage cache (30min TTL),
+   fetch timeout (8s), auto-retry (2x),
+   progressive render, batch 3→5 delay 300→200ms,
+   partial DOM refresh (no replaceWith),
+   sale price bug fix, better WA message,
+   search suggestions, out-of-stock filter,
+   share product, order history, deep link (?product=ID),
+   card entrance animation, heart bounce,
+   toast slide-up, cart badge bump
    ============================================= */
 
 'use strict';
@@ -18,7 +20,9 @@ const CONFIG = {
   DEBOUNCE_MS: 320,
   RECENT_MAX:  10,
   STORE_NAME:  'Maya Mart',
-  BATCH_SIZE:  3,
+  BATCH_SIZE:  5,
+  CACHE_KEY:   'mm_products_v6',
+  CACHE_TTL:   30 * 60 * 1000,
 
   PRODUCT_SHEETS: [
     'pkt SPICES','FITNESS','SPICES','GRAIN LEGUMES',
@@ -89,10 +93,26 @@ document.addEventListener('DOMContentLoaded', () => {
   renderRecentlyViewed();
   injectMobileCartBar();
   injectToast();
+  handleDeepLink();
 });
 
 // ============================================================
-// TOAST
+// DEEP LINK  (?product=ID opens quickview directly)
+// ============================================================
+function handleDeepLink() {
+  const pid = new URLSearchParams(location.search).get('product');
+  if (!pid) return;
+  history.replaceState({}, '', location.pathname);
+  const tryOpen = (attempts) => {
+    const p = allProducts.find(x => x.id === pid);
+    if (p) { openQuickView(p); return; }
+    if (attempts > 0) setTimeout(() => tryOpen(attempts - 1), 500);
+  };
+  tryOpen(10);
+}
+
+// ============================================================
+// TOAST  (slide-up animation)
 // ============================================================
 function injectToast() {
   if (document.getElementById('mmToast')) return;
@@ -106,9 +126,13 @@ function showToast(msg) {
   const t = document.getElementById('mmToast');
   if (!t) return;
   t.textContent = msg;
+  t.classList.remove('show', 'hide');
+  void t.offsetWidth;
   t.classList.add('show');
   clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 2000);
+  t._timer = setTimeout(() => {
+    t.classList.replace('show', 'hide');
+  }, 2000);
 }
 
 // ============================================================
@@ -149,19 +173,44 @@ function updateMobileBar() {
 }
 
 // ============================================================
-// DATA FETCHING
+// DATA FETCHING  (cache + retry + timeout + progressive render)
 // ============================================================
 async function initProducts() {
   showLoading(true);
   showError(false);
   try {
+    // --- Try localStorage cache first ---
+    try {
+      const raw = localStorage.getItem(CONFIG.CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (cached && cached.ts && (Date.now() - cached.ts) < CONFIG.CACHE_TTL && Array.isArray(cached.data) && cached.data.length) {
+          allProducts = cached.data;
+          buildCategoryNav();
+          buildCategoryGrid();
+          applyFiltersAndRender();
+          showLoading(false);
+          handleDeepLink();
+          return;
+        }
+      }
+    } catch(e) { /* corrupt cache — ignore, fetch fresh */ }
+
+    // --- Fetch fresh ---
     const allRows = await fetchAllSheetsBatched();
     allProducts = allRows;
     if (!allProducts.length) throw new Error('No products loaded');
+
+    // Save to cache
+    try {
+      localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify({ ts: Date.now(), data: allProducts }));
+    } catch(e) { /* storage full — skip cache */ }
+
     buildCategoryNav();
     buildCategoryGrid();
     applyFiltersAndRender();
     showLoading(false);
+    handleDeepLink();
   } catch(e) {
     console.error('Load failed:', e);
     showLoading(false);
@@ -172,6 +221,8 @@ async function initProducts() {
 async function fetchAllSheetsBatched() {
   const sheets = CONFIG.PRODUCT_SHEETS;
   const products = [];
+  let firstBatchDone = false;
+
   for (let i = 0; i < sheets.length; i += CONFIG.BATCH_SIZE) {
     const batch = sheets.slice(i, i + CONFIG.BATCH_SIZE);
     const results = await Promise.allSettled(batch.map(s => fetchSheet(s)));
@@ -179,22 +230,57 @@ async function fetchAllSheetsBatched() {
       if (r.status === 'fulfilled') products.push(...r.value);
       else console.warn(`Sheet "${batch[j]}" failed:`, r.reason);
     });
+
+    // Progressive render — show first batch immediately
+    if (!firstBatchDone && products.length) {
+      firstBatchDone = true;
+      allProducts = [...products];
+      buildCategoryNav();
+      buildCategoryGrid();
+      applyFiltersAndRender();
+      showLoading(false);
+    }
+
     if (i + CONFIG.BATCH_SIZE < sheets.length)
-      await new Promise(res => setTimeout(res, 300));
+      await new Promise(res => setTimeout(res, 200));
   }
+
+  // Final update with all products
+  if (products.length !== allProducts.length) {
+    allProducts = products;
+    buildCategoryNav();
+    buildCategoryGrid();
+    applyFiltersAndRender();
+  }
+
   return products;
 }
 
-async function fetchSheet(sheetName) {
+// fetchSheet with timeout (8s) + auto-retry (2x)
+async function fetchSheet(sheetName, retries = 2) {
   const encoded = encodeURIComponent(sheetName);
   const url = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encoded}&nocache=${Date.now()}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const text = await res.text();
-  const jsonStr = text.replace(/^[^\(]*\(/, '').replace(/\);\s*$/, '');
-  const data = JSON.parse(jsonStr);
-  if (!data.table || !data.table.rows) return [];
-  return parseSheet(data.table, sheetName);
+
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 8000);
+
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(tid);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const jsonStr = text.replace(/^[^\(]*\(/, '').replace(/\);\s*$/, '');
+    const data = JSON.parse(jsonStr);
+    if (!data.table || !data.table.rows) return [];
+    return parseSheet(data.table, sheetName);
+  } catch(e) {
+    clearTimeout(tid);
+    if (retries > 0) {
+      await new Promise(res => setTimeout(res, 1000));
+      return fetchSheet(sheetName, retries - 1);
+    }
+    throw e;
+  }
 }
 
 // ============================================================
@@ -328,8 +414,10 @@ function applyFiltersAndRender() {
 
   if (activeFilter === 'instock')
     prods = prods.filter(p => p.availability === 'IN STOCK');
+  else if (activeFilter === 'outofstock')
+    prods = prods.filter(p => p.availability !== 'IN STOCK');
   else if (activeFilter === 'sale')
-    prods = prods.filter(p => p.sale_price < p.price && p.price > 0 && p.sale_price > 0);
+    prods = prods.filter(p => p.sale_price > 0 && p.price > 0 && p.sale_price < p.price);
 
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
@@ -352,7 +440,6 @@ function applyFiltersAndRender() {
   const grid = document.getElementById('productGrid');
   grid.innerHTML = '';
 
-  // Search result count
   updateSearchCount(prods.length);
 
   if (!prods.length) {
@@ -376,7 +463,7 @@ function applyFiltersAndRender() {
 }
 
 function updateSearchCount(count) {
-  let el = document.getElementById('searchResultCount');
+  const el = document.getElementById('searchResultCount');
   if (!el) return;
   if (!searchQuery) { el.textContent = ''; return; }
   el.textContent = count === 0
@@ -400,13 +487,73 @@ function renderNextPage() {
 }
 
 // ============================================================
+// SEARCH SUGGESTIONS
+// ============================================================
+function showSuggestions(q) {
+  let box = document.getElementById('searchSuggestions');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'searchSuggestions';
+    box.className = 'suggestion-box';
+    const wrap = document.querySelector('.search-wrap');
+    if (wrap) wrap.appendChild(box);
+  }
+  if (!q || q.length < 2) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  const matches = allProducts
+    .filter(p => p.title.toLowerCase().includes(q.toLowerCase()))
+    .slice(0, 5);
+  if (!matches.length) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  box.innerHTML = matches.map(p =>
+    `<div class="suggestion-item" data-id="${escHtml(p.id)}">
+       <span style="font-size:.85rem;font-weight:700">${escHtml(p.title)}</span>
+       <span style="font-size:.78rem;color:var(--text-muted);margin-left:6px">${p.sale_price > 0 ? '₹'+p.sale_price : ''}</span>
+     </div>`
+  ).join('');
+  box.style.display = 'block';
+  box.querySelectorAll('.suggestion-item').forEach(item => {
+    item.addEventListener('mousedown', e => {
+      e.preventDefault();
+      const p = allProducts.find(x => x.id === item.dataset.id);
+      if (p) openQuickView(p);
+      box.style.display = 'none';
+    });
+  });
+}
+
+function hideSuggestions() {
+  const box = document.getElementById('searchSuggestions');
+  if (box) box.style.display = 'none';
+}
+
+// ============================================================
+// SKELETON LOADING
+// ============================================================
+function showSkeletons() {
+  const grid = document.getElementById('productGrid');
+  if (!grid) return;
+  grid.innerHTML = Array(8).fill(0).map(() => `
+    <div class="product-card skeleton-card">
+      <div class="skeleton skeleton-img"></div>
+      <div class="product-card-body">
+        <div class="skeleton skeleton-line" style="width:80%;height:14px;margin-bottom:8px"></div>
+        <div class="skeleton skeleton-line" style="width:50%;height:12px;margin-bottom:8px"></div>
+        <div class="skeleton skeleton-line" style="width:35%;height:18px"></div>
+      </div>
+      <div class="product-card-footer">
+        <div class="skeleton skeleton-line" style="width:100%;height:34px;border-radius:6px"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ============================================================
 // PRODUCT CARD
 // ============================================================
 function createProductCard(p) {
   const inCart  = getCartQty(p.id);
   const inWish  = wishlist.some(w => w.id === p.id);
   const inStock = p.availability === 'IN STOCK';
-  const hasSale = p.sale_price < p.price && p.price > 0 && p.sale_price > 0;
+  // FIXED: sale check — both prices must be positive
+  const hasSale = p.sale_price > 0 && p.price > 0 && p.sale_price < p.price;
 
   const card = document.createElement('div');
   card.className = 'product-card';
@@ -442,7 +589,7 @@ function createProductCard(p) {
         ${inStock ? '● In Stock' : '● Out of Stock'}
       </div>
     </div>
-    <div class="product-card-footer">
+    <div class="product-card-footer" data-footer="${escHtml(p.id)}">
       ${inCart > 0
         ? qtyStepperHTML(p.id, inCart)
         : `<button class="btn-add" ${!inStock ? 'disabled' : ''}>
@@ -456,7 +603,17 @@ function createProductCard(p) {
   card.querySelector('.product-card-wish').addEventListener('click', e => {
     e.stopPropagation();
     toggleWishlist(p);
-    refreshCard(p.id);
+    // Heart bounce — toggle class
+    const btn = e.currentTarget;
+    btn.classList.remove('heart-bounce');
+    void btn.offsetWidth;
+    btn.classList.add('heart-bounce');
+    refreshCardFooter(p.id);
+    // Update wish icon without full rebuild
+    const icon = btn.querySelector('i');
+    const nowWished = wishlist.some(w => w.id === p.id);
+    icon.className = `fa-${nowWished ? 'solid' : 'regular'} fa-heart`;
+    btn.classList.toggle('wished', nowWished);
   });
 
   card.querySelector('.btn-qv').addEventListener('click', () => openQuickView(p));
@@ -464,8 +621,8 @@ function createProductCard(p) {
   const addBtn = card.querySelector('.btn-add');
   if (addBtn) addBtn.addEventListener('click', () => {
     addToCart(p);
-    refreshCard(p.id);
-    showToast(`✓ ${p.title.slice(0, 28)} added to cart`);
+    refreshCardFooter(p.id);
+    showToast(`✓ ${p.title} added to cart`);
   });
 
   bindStepperEvents(card, p);
@@ -480,22 +637,44 @@ function qtyStepperHTML(id, qty) {
   </div>`;
 }
 
+function addBtnHTML(p) {
+  const inStock = p.availability === 'IN STOCK';
+  return `<button class="btn-add" ${!inStock ? 'disabled' : ''}>
+    <i class="fa-solid fa-cart-plus"></i> Add to Cart
+  </button>`;
+}
+
 function bindStepperEvents(card, p) {
   const minus = card.querySelector('.stepper-minus');
   const plus  = card.querySelector('.stepper-plus');
-  if (minus) minus.addEventListener('click', () => { changeCartQty(p.id, -1); refreshCard(p.id); });
-  if (plus)  plus.addEventListener('click',  () => { changeCartQty(p.id,  1); refreshCard(p.id); });
+  if (minus) minus.addEventListener('click', () => { changeCartQty(p.id, -1); refreshCardFooter(p.id); });
+  if (plus)  plus.addEventListener('click',  () => { changeCartQty(p.id,  1); refreshCardFooter(p.id); });
 }
 
-function refreshCard(id) {
+// FIXED: Update only footer — no replaceWith, IntersectionObserver stays intact
+function refreshCardFooter(id) {
   const card = document.querySelector(`.product-card[data-id="${CSS.escape(id)}"]`);
   if (!card) return;
+  const footer = card.querySelector(`[data-footer="${CSS.escape(id)}"]`);
+  if (!footer) return;
   const p = allProducts.find(x => x.id === id);
   if (!p) return;
-  const newCard = createProductCard(p);
-  newCard.style.animation = 'none';
-  card.replaceWith(newCard);
+  const qty = getCartQty(id);
+  const qvBtn = '<button class="btn-qv"><i class="fa-solid fa-eye"></i> Quick View</button>';
+  footer.innerHTML = (qty > 0 ? qtyStepperHTML(id, qty) : addBtnHTML(p)) + qvBtn;
+
+  const addBtn = footer.querySelector('.btn-add');
+  if (addBtn) addBtn.addEventListener('click', () => {
+    addToCart(p);
+    refreshCardFooter(id);
+    showToast(`✓ ${p.title} added to cart`);
+  });
+  footer.querySelector('.btn-qv').addEventListener('click', () => openQuickView(p));
+  bindStepperEvents(card, p);
 }
+
+// Keep refreshCard for backward compat (quickview uses it)
+function refreshCard(id) { refreshCardFooter(id); }
 
 // ============================================================
 // LAZY LOAD
@@ -522,7 +701,7 @@ function lazyLoad(img) {
 // ============================================================
 function openQuickView(p) {
   addToRecentlyViewed(p);
-  const hasSale = p.sale_price < p.price && p.price > 0 && p.sale_price > 0;
+  const hasSale = p.sale_price > 0 && p.price > 0 && p.sale_price < p.price;
   const inStock = p.availability === 'IN STOCK';
 
   document.getElementById('qvContent').innerHTML = `
@@ -552,12 +731,18 @@ function openQuickView(p) {
                <i class="fa-solid fa-cart-plus"></i> Add to Cart
              </button>`}
       </div>
+      <button class="btn btn-outline btn-full qv-share-btn" style="margin-top:8px;">
+        <i class="fa-solid fa-share-nodes"></i> Share Product
+      </button>
     </div>`;
 
   const overlay = document.getElementById('quickViewOverlay');
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
   bindQVActions(overlay, p);
+
+  // Share button
+  overlay.querySelector('.qv-share-btn').addEventListener('click', () => shareProduct(p));
 }
 
 function bindQVActions(overlay, p) {
@@ -566,8 +751,8 @@ function bindQVActions(overlay, p) {
   if (addBtn) {
     addBtn.addEventListener('click', () => {
       addToCart(p);
-      refreshCard(p.id);
-      showToast(`✓ ${p.title.slice(0, 28)} added to cart`);
+      refreshCardFooter(p.id);
+      showToast(`✓ ${p.title} added to cart`);
       actionsDiv.innerHTML = qtyStepperHTML(p.id, getCartQty(p.id));
       bindQVSteppers(actionsDiv, p);
     });
@@ -582,7 +767,7 @@ function bindQVSteppers(ctx, p) {
 
   if (minus) minus.addEventListener('click', () => {
     changeCartQty(p.id, -1);
-    refreshCard(p.id);
+    refreshCardFooter(p.id);
     const q = getCartQty(p.id);
     const qv = ctx.querySelector('.qty-val');
     if (qv) qv.textContent = q;
@@ -596,7 +781,7 @@ function bindQVSteppers(ctx, p) {
 
   if (plus) plus.addEventListener('click', () => {
     changeCartQty(p.id, 1);
-    refreshCard(p.id);
+    refreshCardFooter(p.id);
     const qv = ctx.querySelector('.qty-val');
     if (qv) qv.textContent = getCartQty(p.id);
   });
@@ -605,6 +790,23 @@ function bindQVSteppers(ctx, p) {
 function closeQuickView() {
   document.getElementById('quickViewOverlay').classList.add('hidden');
   document.body.style.overflow = '';
+}
+
+// ============================================================
+// SHARE PRODUCT
+// ============================================================
+function shareProduct(p) {
+  const url = `${location.origin}${location.pathname}?product=${encodeURIComponent(p.id)}`;
+  if (navigator.share) {
+    navigator.share({ title: p.title, text: `Check out ${p.title} on Maya Mart`, url })
+      .catch(() => {});
+  } else {
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('📋 Link copied to clipboard!');
+    }).catch(() => {
+      showToast('📋 Copy this link: ' + url);
+    });
+  }
 }
 
 // ============================================================
@@ -646,7 +848,14 @@ function saveCart() { localStorage.setItem('mm_cart', JSON.stringify(cart)); }
 function renderCartBadge() {
   const total = cart.reduce((s, i) => s + i.qty, 0);
   const el = document.getElementById('cartCount');
-  if (el) { el.textContent = total; el.classList.toggle('hidden', total === 0); }
+  if (el) {
+    el.textContent = total;
+    el.classList.toggle('hidden', total === 0);
+    // Cart badge bump animation
+    el.classList.remove('cart-bump');
+    void el.offsetWidth;
+    el.classList.add('cart-bump');
+  }
 }
 
 // ============================================================
@@ -664,6 +873,25 @@ function toggleWishlist(p) {
 function renderWishlistBadge() {
   const el = document.getElementById('wishlistCount');
   if (el) { el.textContent = wishlist.length; el.classList.toggle('hidden', wishlist.length === 0); }
+}
+
+// ============================================================
+// ORDER HISTORY
+// ============================================================
+function saveOrderToHistory(cartItems, total, deliveryMode, name, address) {
+  try {
+    const orders = JSON.parse(localStorage.getItem('mm_orders') || '[]');
+    orders.unshift({
+      id: Date.now(),
+      date: new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }),
+      items: cartItems.map(i => ({ id: i.id, title: i.title, qty: i.qty, price: i.price })),
+      total,
+      type: deliveryMode,
+      name,
+      address: deliveryMode === 'delivery' ? address : ''
+    });
+    localStorage.setItem('mm_orders', JSON.stringify(orders.slice(0, 20)));
+  } catch(e) { /* storage full */ }
 }
 
 // ============================================================
@@ -730,6 +958,7 @@ function toggleDarkMode() {
 function showLoading(show) {
   const el = document.getElementById('loadingState');
   if (el) el.classList.toggle('hidden', !show);
+  if (show) showSkeletons();
 }
 
 function showError(show) {
@@ -767,6 +996,7 @@ function bindUI() {
 
   const onSearchInput = (input) => {
     updateClearBtn(input);
+    showSuggestions(input.value.trim());
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       searchQuery = input.value.trim();
@@ -784,14 +1014,21 @@ function bindUI() {
       if (el) { el.value = ''; updateClearBtn(el); }
     });
     searchQuery = '';
+    hideSuggestions();
     applyFiltersAndRender();
   };
 
   const searchInput = document.getElementById('searchInput');
-  if (searchInput) searchInput.addEventListener('input', () => onSearchInput(searchInput));
+  if (searchInput) {
+    searchInput.addEventListener('input', () => onSearchInput(searchInput));
+    searchInput.addEventListener('blur', () => setTimeout(hideSuggestions, 200));
+  }
 
   const searchInputMobile = document.getElementById('searchInputMobile');
-  if (searchInputMobile) searchInputMobile.addEventListener('input', () => onSearchInput(searchInputMobile));
+  if (searchInputMobile) {
+    searchInputMobile.addEventListener('input', () => onSearchInput(searchInputMobile));
+    searchInputMobile.addEventListener('blur', () => setTimeout(hideSuggestions, 200));
+  }
 
   document.querySelectorAll('.search-clear-btn').forEach(btn => {
     btn.addEventListener('click', () => { clearSearch(); btn.closest('.search-wrap')?.querySelector('input')?.focus(); });
@@ -836,8 +1073,6 @@ function bindUI() {
   if (wishBtn)   wishBtn.addEventListener('click', () => { renderWishPanel(); wishPanel.classList.remove('hidden'); });
   if (wishClose) wishClose.addEventListener('click', () => wishPanel.classList.add('hidden'));
   if (wishPanel) wishPanel.addEventListener('click', e => { if (e.target === wishPanel) wishPanel.classList.add('hidden'); });
-
-  // Note: retry button uses inline onclick="initProducts()" in HTML
 }
 
 // ============================================================
@@ -887,15 +1122,15 @@ function renderCartPanel() {
   list.querySelectorAll('.cart-item-remove-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       removeFromCart(btn.dataset.id);
-      refreshCard(btn.dataset.id);
+      refreshCardFooter(btn.dataset.id);
       renderCartPanel();
     });
   });
   list.querySelectorAll('.stepper-minus').forEach(btn => {
-    btn.addEventListener('click', () => { changeCartQty(btn.dataset.id, -1); refreshCard(btn.dataset.id); renderCartPanel(); });
+    btn.addEventListener('click', () => { changeCartQty(btn.dataset.id, -1); refreshCardFooter(btn.dataset.id); renderCartPanel(); });
   });
   list.querySelectorAll('.stepper-plus').forEach(btn => {
-    btn.addEventListener('click', () => { changeCartQty(btn.dataset.id, 1); refreshCard(btn.dataset.id); renderCartPanel(); });
+    btn.addEventListener('click', () => { changeCartQty(btn.dataset.id, 1); refreshCardFooter(btn.dataset.id); renderCartPanel(); });
   });
 
   const sum = cart.reduce((s, i) => s + (i.price * i.qty), 0);
@@ -962,12 +1197,17 @@ function renderCartPanel() {
       localStorage.setItem('mm_cust_name', name);
       if (deliveryMode === 'delivery') localStorage.setItem('mm_cust_address', address);
 
+      // IMPROVED: full product detail in WA message
       const lines = cart.map(i =>
-        `• ${i.title} × ${i.qty}${i.price > 0 ? ` = ₹${i.price * i.qty}` : ''}`
+        `• ${i.title}\n  ID: ${i.id} | Qty: ${i.qty}${i.price > 0 ? ` | ₹${i.price} × ${i.qty} = ₹${i.price * i.qty}` : ''}`
       ).join('\n');
       const orderType = deliveryMode === 'delivery' ? 'Home Delivery 🚚' : 'Store Pickup 🏪';
       const addrLine  = deliveryMode === 'delivery' ? `\nAddress: ${address}` : '';
-      const msg = `Hello Maya Mart! 🛒\n\nOrder Type: ${orderType}\nName: ${name}${addrLine}\n\nMy Order:\n${lines}\n\n${sum > 0 ? `Total (MRP): ₹${sum}` : 'Please confirm prices.'}`;
+      const msg = `🛒 *Maya Mart Order*\n\nOrder Type: ${orderType}\nName: ${name}${addrLine}\n\n*My Order:*\n${lines}\n\n${sum > 0 ? `*Total (MRP): ₹${sum}*` : 'Please confirm prices.'}`;
+
+      // Save to order history
+      saveOrderToHistory(cart, sum, deliveryMode, name, address);
+
       window.open(`https://wa.me/${CONFIG.WA_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
     });
   }
@@ -1015,9 +1255,8 @@ function renderWishPanel() {
       const p = allProducts.find(x => x.id === btn.dataset.id);
       if (p) {
         addToCart(p);
-        refreshCard(p.id);
-        showToast(`✓ ${p.title.slice(0, 28)} added to cart`);
-        // Visual feedback on button
+        refreshCardFooter(p.id);
+        showToast(`✓ ${p.title} added to cart`);
         btn.innerHTML = '<i class="fa-solid fa-check"></i>';
         btn.style.background = 'var(--green-dark)';
         setTimeout(() => { btn.innerHTML = '<i class="fa-solid fa-cart-plus"></i>'; btn.style.background = ''; }, 1500);
@@ -1028,7 +1267,7 @@ function renderWishPanel() {
   list.querySelectorAll('.wish-remove').forEach(btn => {
     btn.addEventListener('click', () => {
       const p = allProducts.find(x => x.id === btn.dataset.id);
-      if (p) { toggleWishlist(p); refreshCard(p.id); }
+      if (p) { toggleWishlist(p); refreshCardFooter(p.id); }
       renderWishPanel();
     });
   });
