@@ -711,7 +711,17 @@ function updateSubtitle(count) {
 function bindUI() {
   // Search — bind both desktop and mobile inputs to same handler
   let debounceTimer;
+
+  const updateClearBtn = (input) => {
+    const wrap = input.closest('.search-wrap');
+    if (!wrap) return;
+    let btn = wrap.querySelector('.search-clear-btn');
+    if (!btn) return;
+    btn.style.display = input.value ? 'flex' : 'none';
+  };
+
   const onSearchInput = (input) => {
+    updateClearBtn(input);
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       searchQuery = input.value.trim();
@@ -719,9 +729,21 @@ function bindUI() {
       const other = input.id === 'searchInput'
         ? document.getElementById('searchInputMobile')
         : document.getElementById('searchInput');
-      if (other && other.value !== input.value) other.value = input.value;
+      if (other && other.value !== input.value) {
+        other.value = input.value;
+        updateClearBtn(other);
+      }
       applyFiltersAndRender();
     }, CONFIG.DEBOUNCE_MS);
+  };
+
+  const clearSearch = () => {
+    ['searchInput', 'searchInputMobile'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { el.value = ''; updateClearBtn(el); }
+    });
+    searchQuery = '';
+    applyFiltersAndRender();
   };
 
   const searchInput = document.getElementById('searchInput');
@@ -729,6 +751,11 @@ function bindUI() {
 
   const searchInputMobile = document.getElementById('searchInputMobile');
   if (searchInputMobile) searchInputMobile.addEventListener('input', () => onSearchInput(searchInputMobile));
+
+  // Wire up clear buttons (injected into HTML)
+  document.querySelectorAll('.search-clear-btn').forEach(btn => {
+    btn.addEventListener('click', () => { clearSearch(); btn.closest('.search-wrap')?.querySelector('input')?.focus(); });
+  });
 
   // Filter buttons
   document.querySelectorAll('[data-filter]').forEach(btn => {
@@ -801,7 +828,7 @@ function renderCartPanel() {
 
   list.innerHTML = cart.map(item => `
     <div class="cart-item" data-id="${escHtml(item.id)}">
-      <img src="${escHtml(item.image)}" alt="${escHtml(item.title)}"
+      <img class="cart-item-img" src="${escHtml(item.image)}" alt="${escHtml(item.title)}"
            onerror="this.src='https://placehold.co/60x60/e8f5e9/1a7a4a?text=?'" />
       <div class="cart-item-info">
         <div class="cart-item-name">${escHtml(item.title)}</div>
