@@ -79,13 +79,15 @@ const CAT_ICONS = {
   'DEFAULT':             ['🛒','📦','🏪','🛍️','🎁','🏬','🧺','🪣'],
 };
 
-// Pick icon from pool using product id hash — deterministic, consistent per product
-function getIconForProduct(category, productId) {
+// Pick icon from pool using product id + title hash — better spread for sequential IDs
+function getIconForProduct(category, productId, productTitle) {
   const pool = CAT_ICONS[category] || CAT_ICONS['DEFAULT'];
-  // Simple hash of id string to pick index
-  let hash = 0;
-  const str = String(productId);
-  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) & 0xffff;
+  const str = String(productId) + String(productTitle || '');
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) ^ str.charCodeAt(i);
+    hash = hash & 0x7fffffff;
+  }
   return pool[hash % pool.length];
 }
 
@@ -340,7 +342,7 @@ function parseSheet(table, sheetName) {
     const rawImage = get(row, 'image_link') || get(row, 'image_url') || '';
     const image = rawImage.startsWith('http')
       ? rawImage
-      : getCatFallbackSvg(category, id);
+      : getCatFallbackSvg(category, id, title);
 
     const rawPrice     = get(row, 'price') || get(row, 'mrp') || get(row, 'mro') || get(row, 'rate') || '';
     const rawSalePrice = get(row, 'sale_price') || get(row, 'sale') || '';
@@ -430,8 +432,8 @@ function getCatIcon(cat) {
 }
 
 // Returns SVG with product-specific icon from category pool
-function getCatFallbackSvg(category, productId) {
-  const icon = productId ? getIconForProduct(category, productId) : getCatIcon(category);
+function getCatFallbackSvg(category, productId, productTitle) {
+  const icon = productId ? getIconForProduct(category, productId, productTitle) : getCatIcon(category);
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'>
     <rect width='200' height='200' fill='%23fff0f0' rx='16'/>
     <text x='100' y='115' font-size='72' text-anchor='middle' dominant-baseline='middle'>${icon}</text>
@@ -601,6 +603,7 @@ function createProductCard(p) {
            data-src="${escHtml(p.image)}"
            data-cat="${escHtml(p.category)}"
            data-pid="${escHtml(p.id)}"
+           data-ptitle="${escHtml(p.title)}"
            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E"
            alt="${escHtml(p.title)}" loading="lazy" />
       ${!inStock
@@ -723,7 +726,7 @@ const imgObserver = window.IntersectionObserver
         if (!e.isIntersecting) return;
         const img = e.target;
         img.src = img.dataset.src;
-        img.onerror = () => { img.src = getCatFallbackSvg(img.dataset.cat||'DEFAULT', img.dataset.pid); img.onerror = null; };
+        img.onerror = () => { img.src = getCatFallbackSvg(img.dataset.cat||'DEFAULT', img.dataset.pid, img.dataset.ptitle); img.onerror = null; };
         obs.unobserve(img);
       });
     }, { rootMargin: '300px' })
