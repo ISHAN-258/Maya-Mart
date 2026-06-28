@@ -57,14 +57,37 @@ const CONFIG = {
 };
 
 const CAT_ICONS = {
-  'SPICES':'🌶️','GRAINS & PULSES':'🫘','OILS & GHEE':'🫙',
-  'DRY FRUITS':'🥜','STAPLES':'🌾','FROZEN':'❄️',
-  'SNACKS':'🍿','BISCUITS & COOKIES':'🍪','NOODLES & SAUCES':'🍜',
-  'TEA & COFFEE':'🍵','DETERGENT':'🧽','GENERAL':'🛒',
-  'COSMETICS':'💄','BABY CARE':'👶','CLEANERS':'🧹',
-  'HAIR CARE':'💇','SOAPS':'🧼','ORAL CARE':'🪥',
-  'FITNESS':'💪','DEFAULT':'🛒'
+  'SPICES':              ['🌶️','🧂','🫚','🌿','🍛','🫙','🌰','🍵'],
+  'GRAINS & PULSES':     ['🫘','🌾','🍚','🌽','🟤','🫓','🥙','🌯'],
+  'OILS & GHEE':         ['🫙','🧈','🍶','💧','🫗','🥛','🏺','🧴'],
+  'DRY FRUITS':          ['🥜','🍇','🌰','🍑','🫐','🍒','🥝','🍈'],
+  'STAPLES':             ['🌾','🍞','🧁','🥐','🫓','🍚','🥣','🌽'],
+  'FROZEN':              ['❄️','🧊','🍦','🫙','🥶','🍧','🌨️','🎐'],
+  'SNACKS':              ['🍿','🥨','🍪','🧆','🥐','🍘','🫔','🥙'],
+  'BISCUITS & COOKIES':  ['🍪','🧁','🍩','🎂','🍰','🥧','🍮','🍡'],
+  'NOODLES & SAUCES':    ['🍜','🍝','🥫','🍲','🫕','🍛','🥘','🍱'],
+  'TEA & COFFEE':        ['🍵','☕','🫖','🧋','🍃','🌿','🫗','🥤'],
+  'DETERGENT':           ['🧽','🧴','🫧','🪣','🧹','🫙','🪥','🧼'],
+  'GENERAL':             ['🛒','🏪','🛍️','📦','🎁','🏬','🧺','🪣'],
+  'COSMETICS':           ['💄','💅','🪞','✨','💋','🧴','👄','💫'],
+  'BABY CARE':           ['👶','🍼','🧸','🎀','🛁','🌸','💝','🧷'],
+  'CLEANERS':            ['🧹','🫧','🪣','🧽','🧴','🪥','🧼','✨'],
+  'HAIR CARE':           ['💇','🪮','✨','🌸','💆','🧴','🫧','🌿'],
+  'SOAPS':               ['🧼','🫧','🌸','💧','✨','🪷','🛁','🌿'],
+  'ORAL CARE':           ['🪥','✨','💧','😁','🌿','🦷','💊','🌊'],
+  'FITNESS':             ['💪','🏋️','🥗','🧃','⚡','🏃','🥤','💊'],
+  'DEFAULT':             ['🛒','📦','🏪','🛍️','🎁','🏬','🧺','🪣'],
 };
+
+// Pick icon from pool using product id hash — deterministic, consistent per product
+function getIconForProduct(category, productId) {
+  const pool = CAT_ICONS[category] || CAT_ICONS['DEFAULT'];
+  // Simple hash of id string to pick index
+  let hash = 0;
+  const str = String(productId);
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) & 0xffff;
+  return pool[hash % pool.length];
+}
 
 // ============================================================
 // STATE
@@ -317,7 +340,7 @@ function parseSheet(table, sheetName) {
     const rawImage = get(row, 'image_link') || get(row, 'image_url') || '';
     const image = rawImage.startsWith('http')
       ? rawImage
-      : getCatFallbackSvg(category);
+      : getCatFallbackSvg(category, id);
 
     const rawPrice     = get(row, 'price') || get(row, 'mrp') || get(row, 'mro') || get(row, 'rate') || '';
     const rawSalePrice = get(row, 'sale_price') || get(row, 'sale') || '';
@@ -401,11 +424,14 @@ function setCategory(cat) {
   applyFiltersAndRender();
 }
 
-function getCatIcon(cat) { return CAT_ICONS[cat] || CAT_ICONS['DEFAULT']; }
+function getCatIcon(cat) {
+  const pool = CAT_ICONS[cat] || CAT_ICONS['DEFAULT'];
+  return pool[0]; // first icon for nav/category grid
+}
 
-// Returns a data:image SVG with the category emoji — used when product has no image
-function getCatFallbackSvg(category) {
-  const icon = getCatIcon(category);
+// Returns SVG with product-specific icon from category pool
+function getCatFallbackSvg(category, productId) {
+  const icon = productId ? getIconForProduct(category, productId) : getCatIcon(category);
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'>
     <rect width='200' height='200' fill='%23fff0f0' rx='16'/>
     <text x='100' y='115' font-size='72' text-anchor='middle' dominant-baseline='middle'>${icon}</text>
@@ -574,6 +600,7 @@ function createProductCard(p) {
       <img class="product-card-img"
            data-src="${escHtml(p.image)}"
            data-cat="${escHtml(p.category)}"
+           data-pid="${escHtml(p.id)}"
            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E"
            alt="${escHtml(p.title)}" loading="lazy" />
       ${!inStock
@@ -696,7 +723,7 @@ const imgObserver = window.IntersectionObserver
         if (!e.isIntersecting) return;
         const img = e.target;
         img.src = img.dataset.src;
-        img.onerror = () => { img.src = getCatFallbackSvg(img.dataset.cat || 'DEFAULT'); img.onerror = null; };
+        img.onerror = () => { img.src = getCatFallbackSvg(img.dataset.cat||'DEFAULT', img.dataset.pid); img.onerror = null; };
         obs.unobserve(img);
       });
     }, { rootMargin: '300px' })
@@ -930,9 +957,9 @@ function renderRecentlyViewed() {
       <div style="width:130px;height:100px;background:var(--surface2);display:flex;
                   align-items:center;justify-content:center;overflow:hidden;">
         <img src="${escHtml(r.image)}" alt="${escHtml(r.title)}"
-             data-cat="${escHtml(r.category||'DEFAULT')}"
+             data-cat="${escHtml(r.category||'DEFAULT')}" data-pid="${escHtml(r.id)}"
              style="width:100%;height:100%;object-fit:contain;padding:6px;"
-             onerror="this.src=getCatFallbackSvg(''+this.dataset.cat);this.onerror=null" />
+             onerror="this.src=getCatFallbackSvg(this.dataset.cat,this.dataset.pid);this.onerror=null" />
       </div>
       <div style="padding:8px;flex:1;display:flex;flex-direction:column;gap:3px;">
         <div style="font-size:.75rem;font-weight:700;color:var(--text);line-height:1.3;
@@ -1113,8 +1140,8 @@ function renderCartPanel() {
   list.innerHTML = cart.map(item => `
     <div class="cart-item" data-id="${escHtml(item.id)}">
       <img class="cart-item-img" src="${escHtml(item.image)}" alt="${escHtml(item.title)}"
-           data-cat="${escHtml(item.category||'DEFAULT')}"
-           onerror="this.src=getCatFallbackSvg(''+this.dataset.cat);this.onerror=null" />
+           data-cat="${escHtml(item.category||'DEFAULT')}" data-pid="${escHtml(item.id)}"
+           onerror="this.src=getCatFallbackSvg(this.dataset.cat,this.dataset.pid);this.onerror=null" />
       <div class="cart-item-info">
         <div class="cart-item-name">${escHtml(item.title)}</div>
         <div class="cart-item-price">${item.price > 0 ? `₹${item.price}` : 'Confirm price'}</div>
@@ -1248,8 +1275,8 @@ function renderWishPanel() {
   list.innerHTML = wishlist.map(item => `
     <div class="wish-item" data-id="${escHtml(item.id)}">
       <img class="wish-item-img" src="${escHtml(item.image)}" alt="${escHtml(item.title)}"
-           data-cat="${escHtml(item.category||'DEFAULT')}"
-           onerror="this.src=getCatFallbackSvg(''+this.dataset.cat);this.onerror=null" />
+           data-cat="${escHtml(item.category||'DEFAULT')}" data-pid="${escHtml(item.id)}"
+           onerror="this.src=getCatFallbackSvg(this.dataset.cat,this.dataset.pid);this.onerror=null" />
       <div class="wish-item-info">
         <div class="wish-item-name">${escHtml(item.title)}</div>
         <div class="wish-item-price">${item.price > 0 ? `₹${item.price}` : '—'}</div>
