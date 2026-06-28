@@ -6,14 +6,14 @@
 /* ---- TOKENS ---- */
 :root {
   /* Brand red — from logo #f50103 */
-  --red:         #f50103;
-  --red-dark:    #c40002;
+  --red:         #cc0000;
+  --red-dark:    #8b0000;
   --red-light:   #fff0f0;
-  --red-mid:     #ff3a3a;
+  --red-mid:     #e03030;
 
   /* Warm grocery accent — saffron/turmeric */
-  --warm:        #ff6b00;
-  --warm-dark:   #cc5500;
+  --warm:        #e07b00;
+  --warm-dark:   #b85e00;
   --warm-light:  #fff7ed;
 
   /* WhatsApp — unchanged */
@@ -161,7 +161,7 @@ h1,h2,h3,h4{font-family:var(--font-head);line-height:1.2;font-weight:800}
 /* ============================================================
    HERO
    ============================================================ */
-.hero{background:linear-gradient(135deg,var(--red-dark) 0%,var(--red) 55%,var(--warm) 100%);color:#fff;padding:48px 0;position:relative;overflow:hidden}
+.hero{background:linear-gradient(160deg,#6b0000 0%,#aa0000 45%,#cc0000 75%,#e07b00 100%);color:#fff;padding:48px 0;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none}
 .hero-inner{display:flex;align-items:center;justify-content:space-between;gap:32px;position:relative}
 .hero-text{flex:1}
