@@ -5,48 +5,72 @@
 
 /* ---- TOKENS ---- */
 :root {
-  --green:       #1a7a4a;
-  --green-dark:  #145e38;
-  --green-light: #e8f5ee;
-  --green-mid:   #2d9c61;
-  --accent:      #f5a623;
-  --accent-dark: #d48b10;
+  /* Brand red — from logo #f50103 */
+  --red:         #f50103;
+  --red-dark:    #c40002;
+  --red-light:   #fff0f0;
+  --red-mid:     #ff3a3a;
+
+  /* Warm grocery accent — saffron/turmeric */
+  --warm:        #ff6b00;
+  --warm-dark:   #cc5500;
+  --warm-light:  #fff7ed;
+
+  /* WhatsApp — unchanged */
   --wa:          #25d366;
   --wa-dark:     #128c4e;
-  --red:         #e53935;
-  --red-light:   #fdecea;
 
-  --bg:          #f4f6f4;
+  /* Danger/error — distinct from brand red */
+  --danger:      #d32f2f;
+  --danger-light:#fdecea;
+
+  /* Surfaces — warm cream grocery feel */
+  --bg:          #fdf6ec;
   --surface:     #ffffff;
-  --surface2:    #f9faf9;
-  --border:      #e0e8e2;
-  --text:        #1a2b22;
-  --text-mid:    #3d5244;
-  --text-muted:  #6b8a74;
-  --shadow:      0 2px 12px rgba(26,122,74,.10);
-  --shadow-md:   0 4px 24px rgba(26,122,74,.15);
+  --surface2:    #fff9f0;
+  --border:      #f0ddd0;
+  --text:        #1a0a00;
+  --text-mid:    #5c2d1e;
+  --text-muted:  #9a7060;
+
+  /* Shadows */
+  --shadow:      0 2px 12px rgba(245,1,3,.08);
+  --shadow-md:   0 4px 24px rgba(245,1,3,.14);
+
+  /* Shape */
   --radius:      14px;
   --radius-sm:   8px;
   --radius-pill: 100px;
 
+  /* Typography */
   --font-head: 'Baloo 2', 'Nunito', sans-serif;
   --font-body: 'Nunito', sans-serif;
 
   --header-h: 110px;
   --transition: .2s ease;
+
+  /* Aliases so all old --green refs work */
+  --green:       var(--red);
+  --green-dark:  var(--red-dark);
+  --green-light: var(--red-light);
+  --green-mid:   var(--red-mid);
+  --accent:      var(--warm);
+  --accent-dark: var(--warm-dark);
 }
 
 .dark-mode {
-  --bg:         #111a14;
-  --surface:    #1a2b1e;
-  --surface2:   #203027;
-  --border:     #2d4535;
-  --text:       #e8f0ea;
-  --text-mid:   #b0c8b8;
-  --text-muted: #7a9e85;
-  --shadow:     0 2px 12px rgba(0,0,0,.4);
-  --shadow-md:  0 4px 24px rgba(0,0,0,.5);
-  --green-light:#1a3326;
+  --bg:          #1a0800;
+  --surface:     #2a1000;
+  --surface2:    #331500;
+  --border:      #5c2a00;
+  --text:        #fef0e6;
+  --text-mid:    #f0c0a0;
+  --text-muted:  #c09070;
+  --shadow:      0 2px 12px rgba(0,0,0,.5);
+  --shadow-md:   0 4px 24px rgba(0,0,0,.6);
+  --red-light:   #3a0a0a;
+  --green-light: #3a0a0a;
+  --warm-light:  #2a1800;
 }
 
 /* ---- RESET ---- */
@@ -137,7 +161,7 @@ h1,h2,h3,h4{font-family:var(--font-head);line-height:1.2;font-weight:800}
 /* ============================================================
    HERO
    ============================================================ */
-.hero{background:linear-gradient(135deg,var(--green-dark) 0%,var(--green) 60%,var(--green-mid) 100%);color:#fff;padding:48px 0;position:relative;overflow:hidden}
+.hero{background:linear-gradient(135deg,var(--red-dark) 0%,var(--red) 55%,var(--warm) 100%);color:#fff;padding:48px 0;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none}
 .hero-inner{display:flex;align-items:center;justify-content:space-between;gap:32px;position:relative}
 .hero-text{flex:1}
@@ -243,8 +267,9 @@ h1,h2,h3,h4{font-family:var(--font-head);line-height:1.2;font-weight:800}
 /* ============================================================
    WHOLESALE SECTION
    ============================================================ */
-.wholesale-section{background:var(--green-light)}
-.wholesale-card{background:var(--green);border-radius:var(--radius);padding:32px 28px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap}
+.wholesale-section{background:var(--warm-light)}
+.wholesale-card{background:linear-gradient(135deg,var(--red-dark),var(--red));border-radius:var(--radius);padding:32px 28px;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;position:relative;overflow:hidden}
+.wholesale-card::before{content:'🛒 🧅 🌶️ 🫙 🌾 🥛 🧄 🍅';position:absolute;right:-20px;top:50%;transform:translateY(-50%);font-size:2.5rem;opacity:.08;letter-spacing:8px;pointer-events:none;white-space:nowrap}
 .wholesale-text h2{color:#fff;font-size:1.5rem;margin-bottom:6px}
 .wholesale-text p{color:rgba(255,255,255,.85);font-size:.95rem}
 
@@ -284,7 +309,7 @@ h1,h2,h3,h4{font-family:var(--font-head);line-height:1.2;font-weight:800}
 /* ============================================================
    FOOTER
    ============================================================ */
-.footer{background:var(--green-dark);color:rgba(255,255,255,.85);padding:32px 0;margin-top:0}
+.footer{background:linear-gradient(135deg,#6b0000,#8b0000);color:rgba(255,255,255,.88);padding:32px 0;margin-top:0}
 .footer-inner{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
 .footer .logo-main{color:#fff;font-size:1.3rem}
 .footer .logo-sub{color:rgba(255,255,255,.7)}
@@ -380,7 +405,7 @@ h1,h2,h3,h4{font-family:var(--font-head);line-height:1.2;font-weight:800}
 /* ============================================================
    DARK MODE ICON SWAP
    ============================================================ */
-.dark-mode #darkToggle .fa-moon::before{content:'\f185'} /* sun icon */
+.dark-mode #darkToggle .fa-moon::before{content:'\f185'}
 
 /* ============================================================
    RESPONSIVE
@@ -438,7 +463,7 @@ h1,h2,h3,h4{font-family:var(--font-head);line-height:1.2;font-weight:800}
 .wish-remove:hover{border-color:var(--red);color:var(--red)}
 
 /* --- Toast notification --- */
-.mm-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a7a4a;color:#fff;padding:10px 20px;border-radius:100px;font-size:.85rem;font-weight:700;z-index:9999;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+.mm-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--red);color:#fff;padding:10px 20px;border-radius:100px;font-size:.85rem;font-weight:700;z-index:9999;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(245,1,3,.35)}
 .mm-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media(min-width:640px){.mm-toast{bottom:24px}}
 
@@ -495,3 +520,137 @@ body{padding-bottom:0}
 
 /* --- Share button in quickview --- */
 .qv-share-btn{margin-top:8px;font-size:.82rem}
+
+/* ============================================================
+   GROCERY THEME — animations, patterns, logo, badge pulse
+   ============================================================ */
+
+/* --- Hero floating grocery icons --- */
+.hero-grocery-float {
+  position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;
+}
+.hero-grocery-float span {
+  position:absolute;font-size:1.8rem;opacity:.07;
+  animation:floatUp 12s linear infinite;
+}
+.hero-grocery-float span:nth-child(1){left:5%;animation-delay:0s;animation-duration:14s}
+.hero-grocery-float span:nth-child(2){left:15%;animation-delay:2s;animation-duration:11s}
+.hero-grocery-float span:nth-child(3){left:28%;animation-delay:4s;animation-duration:16s}
+.hero-grocery-float span:nth-child(4){left:42%;animation-delay:1s;animation-duration:13s}
+.hero-grocery-float span:nth-child(5){left:57%;animation-delay:3s;animation-duration:15s}
+.hero-grocery-float span:nth-child(6){left:70%;animation-delay:5s;animation-duration:12s}
+.hero-grocery-float span:nth-child(7){left:82%;animation-delay:1.5s;animation-duration:17s}
+.hero-grocery-float span:nth-child(8){left:92%;animation-delay:6s;animation-duration:10s}
+
+@keyframes floatUp {
+  0%  {transform:translateY(110%) rotate(0deg);opacity:0}
+  10% {opacity:.07}
+  90% {opacity:.07}
+  100%{transform:translateY(-20%) rotate(20deg);opacity:0}
+}
+
+/* --- Category section warm grain background --- */
+#categories {
+  background: var(--warm-light);
+  background-image: radial-gradient(circle, rgba(245,1,3,.04) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* --- FAQ section subtle pattern --- */
+.faq-section {
+  background: var(--surface2);
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 20px,
+    rgba(245,1,3,.025) 20px,
+    rgba(245,1,3,.025) 21px
+  );
+}
+
+/* --- Products section subtle warm bg --- */
+#products {
+  background: var(--bg);
+}
+
+/* --- Logo image curved edges --- */
+.logo img {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  display: block;
+}
+
+/* --- Cart badge pulse on add --- */
+@keyframes badgePop {
+  0%  {transform:scale(1)}
+  40% {transform:scale(1.5)}
+  70% {transform:scale(.9)}
+  100%{transform:scale(1)}
+}
+.badge.pop { animation: badgePop .4s ease; }
+
+/* --- Wholesale emoji strip already in .wholesale-card::before ---
+   Add a shimmer line across the card bottom for polish --- */
+.wholesale-card::after {
+  content:'';
+  position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
+  animation:shimmer 3s ease-in-out infinite;
+}
+@keyframes shimmer {
+  0%  {transform:translateX(-100%)}
+  100%{transform:translateX(100%)}
+}
+
+/* --- Product card hover: warm red tint on image wrap --- */
+.product-card:hover .product-card-img-wrap {
+  background: var(--red-light);
+}
+
+/* --- In-stock dot: pulse animation --- */
+.product-card-avail.in-stock::before {
+  content:'';
+  display:inline-block;width:7px;height:7px;
+  background:var(--red);border-radius:50%;margin-right:4px;
+  animation:dotPulse 2s ease-in-out infinite;
+  vertical-align:middle;
+}
+.product-card-avail.in-stock {
+  /* remove the ● text bullet since we use ::before */
+}
+@keyframes dotPulse {
+  0%,100%{opacity:1;transform:scale(1)}
+  50%     {opacity:.4;transform:scale(1.4)}
+}
+
+/* --- Disclaimer banner: warm orange instead of yellow-green --- */
+.disclaimer-banner {
+  background: linear-gradient(135deg,#fff9e6,#fff3e0);
+  border-bottom: 2px solid var(--warm);
+  color: #7a3500;
+}
+.disclaimer-banner i { color: var(--warm); }
+.dark-mode .disclaimer-banner { background:#2a1400;color:#ffcc80;border-color:#cc5500; }
+
+/* --- Map btn: red --- */
+.map-btn { background: var(--red); color:#fff; }
+.map-btn:hover { background: var(--red-dark); }
+
+/* --- Fab buttons: warm accent for location --- */
+.fab-loc { background: var(--warm); }
+.fab-call { background: var(--red); }
+
+/* --- mm-toast: already defined in improvements batch above --- */
+
+/* --- Mobile cart bar: red buttons --- */
+.mobile-cart-bar .btn-primary { background: var(--red); }
+
+/* --- Reduce motion respect --- */
+@media(prefers-reduced-motion:reduce) {
+  .hero-grocery-float span,
+  .wholesale-card::after,
+  .badge.pop,
+  .product-card-avail.in-stock::before { animation:none; }
+}
