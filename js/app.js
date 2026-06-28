@@ -317,7 +317,7 @@ function parseSheet(table, sheetName) {
     const rawImage = get(row, 'image_link') || get(row, 'image_url') || '';
     const image = rawImage.startsWith('http')
       ? rawImage
-      : `https://placehold.co/200x200/e8f5e9/1a7a4a?text=${encodeURIComponent(title.slice(0, 14))}`;
+      : getCatFallbackSvg(category);
 
     const rawPrice     = get(row, 'price') || get(row, 'mrp') || get(row, 'mro') || get(row, 'rate') || '';
     const rawSalePrice = get(row, 'sale_price') || get(row, 'sale') || '';
@@ -402,6 +402,16 @@ function setCategory(cat) {
 }
 
 function getCatIcon(cat) { return CAT_ICONS[cat] || CAT_ICONS['DEFAULT']; }
+
+// Returns a data:image SVG with the category emoji — used when product has no image
+function getCatFallbackSvg(category) {
+  const icon = getCatIcon(category);
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'>
+    <rect width='200' height='200' fill='%23fff0f0' rx='16'/>
+    <text x='100' y='115' font-size='72' text-anchor='middle' dominant-baseline='middle'>${icon}</text>
+  </svg>`;
+  return `data:image/svg+xml,${svg.replace(/\n\s*/g, ' ')}`;
+}
 
 // ============================================================
 // FILTER / SORT / SEARCH
@@ -563,6 +573,7 @@ function createProductCard(p) {
     <div class="product-card-img-wrap">
       <img class="product-card-img"
            data-src="${escHtml(p.image)}"
+           data-cat="${escHtml(p.category)}"
            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E"
            alt="${escHtml(p.title)}" loading="lazy" />
       ${!inStock
@@ -685,7 +696,7 @@ const imgObserver = window.IntersectionObserver
         if (!e.isIntersecting) return;
         const img = e.target;
         img.src = img.dataset.src;
-        img.onerror = () => { img.src = `https://placehold.co/200x200/e8f5e9/1a7a4a?text=No+Image`; img.onerror = null; };
+        img.onerror = () => { img.src = getCatFallbackSvg(img.dataset.cat || 'DEFAULT'); img.onerror = null; };
         obs.unobserve(img);
       });
     }, { rootMargin: '300px' })
@@ -707,7 +718,7 @@ function openQuickView(p) {
   document.getElementById('qvContent').innerHTML = `
     <div class="qv-img-wrap">
       <img class="qv-img" src="${escHtml(p.image)}" alt="${escHtml(p.title)}" loading="lazy"
-           onerror="this.src='https://placehold.co/300x300/e8f5e9/1a7a4a?text=No+Image'" />
+           onerror="this.src=getCatFallbackSvg('${escHtml(p.category)}');this.onerror=null" />
     </div>
     <div class="qv-info">
       <div class="qv-cat">${titleCase(p.category)}</div>
@@ -815,7 +826,7 @@ function shareProduct(p) {
 function addToCart(p) {
   const existing = cart.find(i => i.id === p.id);
   if (existing) existing.qty += 1;
-  else cart.push({ id: p.id, title: p.title, price: p.sale_price || p.price, image: p.image, qty: 1 });
+  else cart.push({ id: p.id, title: p.title, price: p.sale_price || p.price, image: p.image, qty: 1, category: p.category });
   saveCart();
   renderCartBadge();
   updateMobileBar();
@@ -864,7 +875,7 @@ function renderCartBadge() {
 function toggleWishlist(p) {
   const idx = wishlist.findIndex(w => w.id === p.id);
   if (idx >= 0) wishlist.splice(idx, 1);
-  else wishlist.push({ id: p.id, title: p.title, price: p.sale_price || p.price, image: p.image });
+  else wishlist.push({ id: p.id, title: p.title, price: p.sale_price || p.price, image: p.image, category: p.category });
   localStorage.setItem('mm_wishlist', JSON.stringify(wishlist));
   renderWishlistBadge();
   updateMobileBar();
@@ -899,7 +910,7 @@ function saveOrderToHistory(cartItems, total, deliveryMode, name, address) {
 // ============================================================
 function addToRecentlyViewed(p) {
   recentlyViewed = recentlyViewed.filter(r => r.id !== p.id);
-  recentlyViewed.unshift({ id: p.id, title: p.title, price: p.sale_price || p.price, image: p.image });
+  recentlyViewed.unshift({ id: p.id, title: p.title, price: p.sale_price || p.price, image: p.image, category: p.category });
   if (recentlyViewed.length > CONFIG.RECENT_MAX) recentlyViewed.pop();
   localStorage.setItem('mm_recent', JSON.stringify(recentlyViewed));
   renderRecentlyViewed();
@@ -919,8 +930,9 @@ function renderRecentlyViewed() {
       <div style="width:130px;height:100px;background:var(--surface2);display:flex;
                   align-items:center;justify-content:center;overflow:hidden;">
         <img src="${escHtml(r.image)}" alt="${escHtml(r.title)}"
+             data-cat="${escHtml(r.category||'DEFAULT')}"
              style="width:100%;height:100%;object-fit:contain;padding:6px;"
-             onerror="this.src='https://placehold.co/130x100/e8f5e9/1a7a4a?text=?'" />
+             onerror="this.src=getCatFallbackSvg(''+this.dataset.cat);this.onerror=null" />
       </div>
       <div style="padding:8px;flex:1;display:flex;flex-direction:column;gap:3px;">
         <div style="font-size:.75rem;font-weight:700;color:var(--text);line-height:1.3;
@@ -1101,7 +1113,8 @@ function renderCartPanel() {
   list.innerHTML = cart.map(item => `
     <div class="cart-item" data-id="${escHtml(item.id)}">
       <img class="cart-item-img" src="${escHtml(item.image)}" alt="${escHtml(item.title)}"
-           onerror="this.src='https://placehold.co/60x60/e8f5e9/1a7a4a?text=?'" />
+           data-cat="${escHtml(item.category||'DEFAULT')}"
+           onerror="this.src=getCatFallbackSvg(''+this.dataset.cat);this.onerror=null" />
       <div class="cart-item-info">
         <div class="cart-item-name">${escHtml(item.title)}</div>
         <div class="cart-item-price">${item.price > 0 ? `₹${item.price}` : 'Confirm price'}</div>
@@ -1235,7 +1248,8 @@ function renderWishPanel() {
   list.innerHTML = wishlist.map(item => `
     <div class="wish-item" data-id="${escHtml(item.id)}">
       <img class="wish-item-img" src="${escHtml(item.image)}" alt="${escHtml(item.title)}"
-           onerror="this.src='https://placehold.co/60x60/e8f5e9/1a7a4a?text=?'" />
+           data-cat="${escHtml(item.category||'DEFAULT')}"
+           onerror="this.src=getCatFallbackSvg(''+this.dataset.cat);this.onerror=null" />
       <div class="wish-item-info">
         <div class="wish-item-name">${escHtml(item.title)}</div>
         <div class="wish-item-price">${item.price > 0 ? `₹${item.price}` : '—'}</div>
