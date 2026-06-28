@@ -6,10 +6,10 @@
 /* ---- TOKENS ---- */
 :root {
   /* Brand red — from logo #f50103 */
-  --red:         #cc0000;
-  --red-dark:    #8b0000;
+  --red:         #b71c1c;
+  --red-dark:    #7f0000;
   --red-light:   #fff0f0;
-  --red-mid:     #e03030;
+  --red-mid:     #c62828;
 
   /* Warm grocery accent — saffron/turmeric */
   --warm:        #e07b00;
@@ -59,17 +59,21 @@
 }
 
 .dark-mode {
-  --bg:          #1a0800;
-  --surface:     #2a1000;
-  --surface2:    #331500;
-  --border:      #5c2a00;
-  --text:        #fef0e6;
-  --text-mid:    #f0c0a0;
-  --text-muted:  #c09070;
-  --shadow:      0 2px 12px rgba(0,0,0,.5);
-  --shadow-md:   0 4px 24px rgba(0,0,0,.6);
-  --red-light:   #3a0a0a;
-  --green-light: #3a0a0a;
+  --bg:          #121212;
+  --surface:     #1e1e1e;
+  --surface2:    #2a2a2a;
+  --border:      #3a3a3a;
+  --text:        #f0f0f0;
+  --text-mid:    #c8c8c8;
+  --text-muted:  #909090;
+  --shadow:      0 2px 12px rgba(0,0,0,.6);
+  --shadow-md:   0 4px 24px rgba(0,0,0,.7);
+  --red-light:   #2a0a0a;
+  --green-light: #2a0a0a;
+  --warm-light:  #1e1800;
+  --red:         #e53935;
+  --red-dark:    #b71c1c;
+}
   --warm-light:  #2a1800;
 }
 
@@ -161,7 +165,7 @@ h1,h2,h3,h4{font-family:var(--font-head);line-height:1.2;font-weight:800}
 /* ============================================================
    HERO
    ============================================================ */
-.hero{background:linear-gradient(160deg,#6b0000 0%,#aa0000 45%,#cc0000 75%,#e07b00 100%);color:#fff;padding:48px 0;position:relative;overflow:hidden}
+.hero{background:linear-gradient(160deg,#4a0000 0%,#7f0000 35%,#b71c1c 70%,#c8580a 100%);color:#fff;padding:48px 0;position:relative;overflow:hidden}
 .hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");pointer-events:none}
 .hero-inner{display:flex;align-items:center;justify-content:space-between;gap:32px;position:relative}
 .hero-text{flex:1}
