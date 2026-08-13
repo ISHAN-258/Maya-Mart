@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#9E1B1B" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Page Not Found – Maya Mart</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Baloo+2:wght@700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" />
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Nunito',sans-serif;
+      background:#FAFAFA;
+      color:#1C1C1C;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+      text-align:center;
+    }
+
+    /* Floating grocery emojis background */
+    .floaters{
+      position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0;
+    }
+    .floater{
+      position:absolute;font-size:2rem;opacity:.06;
+      animation:drift 14s linear infinite;
+    }
+    .floater:nth-child(1){left:5%;animation-delay:0s;animation-duration:16s}
+    .floater:nth-child(2){left:18%;animation-delay:3s;animation-duration:12s}
+    .floater:nth-child(3){left:32%;animation-delay:6s;animation-duration:18s}
+    .floater:nth-child(4){left:48%;animation-delay:1s;animation-duration:14s}
+    .floater:nth-child(5){left:62%;animation-delay:4s;animation-duration:11s}
+    .floater:nth-child(6){left:76%;animation-delay:7s;animation-duration:15s}
+    .floater:nth-child(7){left:88%;animation-delay:2s;animation-duration:13s}
+    @keyframes drift{
+      0%  {transform:translateY(110vh) rotate(0deg);opacity:0}
+      10% {opacity:.06}
+      90% {opacity:.06}
+      100%{transform:translateY(-10vh) rotate(25deg);opacity:0}
+    }
+
+    .card{
+      background:#fff;
+      border:1.5px solid #EAEAEA;
+      border-radius:24px;
+      padding:48px 40px;
+      max-width:480px;
+      width:100%;
+      box-shadow:0 8px 40px rgba(0,0,0,.08);
+      position:relative;z-index:1;
+    }
+
+    .error-emoji{
+      font-size:4rem;
+      margin-bottom:8px;
+      display:block;
+      animation:wobble 2s ease-in-out infinite;
+    }
+    @keyframes wobble{
+      0%,100%{transform:rotate(-4deg)}
+      50%    {transform:rotate(4deg)}
+    }
+
+    .error-code{
+      font-family:'Baloo 2',sans-serif;
+      font-size:6rem;
+      font-weight:900;
+      color:#9E1B1B;
+      line-height:1;
+      margin-bottom:8px;
+    }
+
+    .error-title{
+      font-family:'Baloo 2',sans-serif;
+      font-size:1.4rem;
+      font-weight:800;
+      color:#1C1C1C;
+      margin-bottom:10px;
+    }
+
+    .error-sub{
+      font-size:.95rem;
+      color:#4A4A4A;
+      line-height:1.6;
+      margin-bottom:32px;
+    }
+
+    .btn-row{
+      display:flex;
+      gap:12px;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:12px 24px;
+      border-radius:100px;
+      font-weight:700;
+      font-size:.95rem;
+      text-decoration:none;
+      cursor:pointer;
+      border:none;
+      font-family:inherit;
+      transition:transform .2s,box-shadow .2s;
+    }
+    .btn:active{transform:scale(.97)}
+    .btn-primary{
+      background:#9E1B1B;
+      color:#fff;
+      box-shadow:0 4px 16px rgba(158,27,27,.25);
+    }
+    .btn-primary:hover{background:#7f0000;box-shadow:0 6px 24px rgba(158,27,27,.35)}
+    .btn-wa{
+      background:#25d366;
+      color:#fff;
+      box-shadow:0 4px 16px rgba(37,211,102,.2);
+    }
+    .btn-wa:hover{background:#128c4e}
+
+    .divider{
+      border:none;
+      border-top:1px solid #EAEAEA;
+      margin:28px 0;
+    }
+
+    .quick-links-label{
+      font-size:.78rem;
+      font-weight:700;
+      color:#8A8A8A;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      margin-bottom:14px;
+    }
+
+    .quick-links{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+
+    .quick-link{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:7px 14px;
+      border:1.5px solid #EAEAEA;
+      border-radius:100px;
+      font-size:.82rem;
+      font-weight:700;
+      color:#4A4A4A;
+      text-decoration:none;
+      transition:border-color .2s,color .2s;
+    }
+    .quick-link:hover{border-color:#9E1B1B;color:#9E1B1B}
+
+    .logo-strip{
+      margin-top:32px;
+      font-family:'Baloo 2',sans-serif;
+      font-size:1rem;
+      font-weight:800;
+      color:#9E1B1B;
+      opacity:.6;
+    }
+
+    /* Dark mode */
+    @media(prefers-color-scheme:dark){
+      body{background:#0D1117;color:#E2E8F0}
+      .card{background:#161B22;border-color:#30363D;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+      .error-title{color:#E2E8F0}
+      .error-sub{color:#A0AEC0}
+      .quick-link{background:rgba(255,255,255,.04);border-color:#30363D;color:#A0AEC0}
+      .quick-link:hover{border-color:#E63946;color:#E63946}
+      .divider{border-color:#30363D}
+      .logo-strip{color:#E63946}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating grocery background -->
+  <div class="floaters" aria-hidden="true">
+    <span class="floater">🌶️</span>
+    <span class="floater">🧅</span>
+    <span class="floater">🌾</span>
+    <span class="floater">🥛</span>
+    <span class="floater">🫙</span>
+    <span class="floater">🧄</span>
+    <span class="floater">🍅</span>
+  </div>
+
+  <div class="card">
+    <span class="error-emoji">🛒</span>
+    <div class="error-code">404</div>
+    <div class="error-title">Shelf Not Found!</div>
+    <p class="error-sub">
+      Looks like this product wandered off the shelf.<br>
+      The page you're looking for doesn't exist or has been moved.
+    </p>
+
+    <div class="btn-row">
+      <a href="/" class="btn btn-primary">
+        <i class="fa-solid fa-house"></i> Back to Store
+      </a>
+      <a href="https://wa.me/919278224984" target="_blank" rel="noopener" class="btn btn-wa">
+        <i class="fa-brands fa-whatsapp"></i> Contact Us
+      </a>
+    </div>
+
+    <hr class="divider" />
+
+    <p class="quick-links-label">Quick links</p>
+    <div class="quick-links">
+      <a href="/#products" class="quick-link">
+        <i class="fa-solid fa-basket-shopping"></i> Products
+      </a>
+      <a href="/#categories" class="quick-link">
+        <i class="fa-solid fa-grid-2"></i> Categories
+      </a>
+      <a href="/#location" class="quick-link">
+        <i class="fa-solid fa-location-dot"></i> Find Us
+      </a>
+      <a href="/#faq" class="quick-link">
+        <i class="fa-solid fa-circle-question"></i> FAQ
+      </a>
+    </div>
+
+    <div class="logo-strip">माया मार्ट · Maya Mart</div>
+  </div>
+
+</body>
+</html>

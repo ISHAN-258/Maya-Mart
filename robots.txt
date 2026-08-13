@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Block irrelevant files from indexing
+Disallow: /js/
+Disallow: /css/
+Disallow: /icons/
+Disallow: /manifest.json
+Disallow: /service-worker.js
+
+# Allow search engines to index everything important
+Allow: /index.html
+Allow: /favicon.svg
+
+# Sitemap location
+Sitemap: https://mayamartmau.in/sitemap.xml
+
+# Crawl delay — be polite to small GitHub Pages host
+Crawl-delay: 2
