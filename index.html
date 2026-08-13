@@ -210,6 +210,44 @@
     .field-error{font-size:.75rem;color:#9E1B1B;min-height:14px}
     .checkout-order-summary{background:#F8F5F2;border:1.5px solid #EAEAEA;border-radius:10px;padding:12px;margin-bottom:16px;font-size:.82rem;max-height:160px;overflow-y:auto;color:#4A4A4A}
     .checkout-total-row{display:flex;justify-content:space-between;padding:8px 0 0;border-top:1px solid #EAEAEA;font-weight:800;color:#1C1C1C;font-size:.88rem}
+    /* ---- REVIEWS ---- */
+    .review-section{background:var(--surface2,#F8F5F2)}
+    .dark-mode .review-section{background:#0D1117}
+    .reviews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:28px}
+    .review-card{background:#fff;border:1.5px solid #EAEAEA;border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 12px rgba(0,0,0,.06);position:relative}
+    .dark-mode .review-card{background:#1A2030;border-color:#30363D}
+    .review-card-stars{color:#f5a623;font-size:1.1rem;letter-spacing:2px}
+    .review-card-text{font-size:.9rem;color:#4A4A4A;line-height:1.6;flex:1}
+    .dark-mode .review-card-text{color:#A0AEC0}
+    .review-card-name{font-size:.8rem;font-weight:800;color:#9E1B1B;margin-top:4px}
+    .dark-mode .review-card-name{color:#E63946}
+    .review-card-date{font-size:.72rem;color:#8A8A8A}
+    .review-loading{text-align:center;padding:40px 20px;color:#8A8A8A;grid-column:1/-1}
+    .review-empty{text-align:center;padding:32px;color:#8A8A8A;grid-column:1/-1;font-size:.9rem}
+    .review-avg-wrap{text-align:center;margin-bottom:28px;display:flex;align-items:center;justify-content:center;gap:10px}
+    .review-avg-stars{color:#f5a623;font-size:1.4rem;letter-spacing:2px}
+    .review-avg-text{font-size:.9rem;font-weight:700;color:#4A4A4A}
+    .dark-mode .review-avg-text{color:#A0AEC0}
+    .review-form-wrap{background:#fff;border:1.5px solid #EAEAEA;border-radius:16px;padding:24px;max-width:560px;margin:0 auto;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+    .dark-mode .review-form-wrap{background:#1A2030;border-color:#30363D}
+    .review-form-title{font-size:1.1rem;font-weight:800;color:#1C1C1C;margin-bottom:4px}
+    .dark-mode .review-form-title{color:#E2E8F0}
+    .review-form-sub{font-size:.83rem;color:#8A8A8A;margin-bottom:18px}
+    .review-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+    .review-field label{font-size:.84rem;font-weight:700;color:#4A4A4A}
+    .dark-mode .review-field label{color:#A0AEC0}
+    .review-field input,.review-field textarea{padding:10px 14px;border:2px solid #EAEAEA;border-radius:10px;background:#F8F5F2;color:#1C1C1C;font-size:.9rem;outline:none;font-family:inherit;resize:vertical;transition:border-color .2s}
+    .review-field input:focus,.review-field textarea:focus{border-color:#9E1B1B}
+    .dark-mode .review-field input,.dark-mode .review-field textarea{background:rgba(255,255,255,.05);color:#E2E8F0;border-color:#30363D}
+    .dark-mode .review-field input:focus,.dark-mode .review-field textarea:focus{border-color:#E63946}
+    .star-picker{display:flex;gap:6px;font-size:2rem;cursor:pointer}
+    .star-pick{color:#D0D0D0;transition:color .15s,transform .15s;user-select:none}
+    .star-pick.active,.star-pick.hover{color:#f5a623;transform:scale(1.15)}
+    .rv-msg{padding:12px 16px;border-radius:10px;font-size:.85rem;font-weight:700;display:flex;align-items:center;gap:8px;margin-top:10px}
+    .rv-msg--success{background:#e8f5ee;color:#1a7a4a;border:1.5px solid #b2dfcb}
+    .rv-msg--error{background:#fdecea;color:#c62828;border:1.5px solid #f5c6cb}
+    .dark-mode .rv-msg--success{background:#0a2a1a;color:#4caf88}
+    .dark-mode .rv-msg--error{background:#2a0a0a;color:#f48080}
   </style>
 </head>
 <body class="light-mode">
@@ -493,6 +531,74 @@
   </main>
 
   <!-- ===== FOOTER ===== -->
+
+  <!-- ===== REVIEWS SECTION ===== -->
+  <section class="section review-section" id="reviews">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">⭐ Customer Reviews</h2>
+        <p class="section-sub">What our customers say about Maya Mart</p>
+      </div>
+
+      <!-- Reviews display -->
+      <div class="reviews-grid" id="reviewsGrid">
+        <div class="review-loading">
+          <div class="spinner"></div>
+          <p>Loading reviews…</p>
+        </div>
+      </div>
+
+      <!-- Average rating bar -->
+      <div class="review-avg-wrap hidden" id="reviewAvgWrap">
+        <div class="review-avg-stars" id="reviewAvgStars"></div>
+        <div class="review-avg-text" id="reviewAvgText"></div>
+      </div>
+
+      <!-- Submit form -->
+      <div class="review-form-wrap">
+        <h3 class="review-form-title">Leave a Review</h3>
+        <p class="review-form-sub">Shopped at Maya Mart? Share your experience!</p>
+
+        <div class="review-form" id="reviewForm">
+          <div class="review-field">
+            <label for="rvName">Your Name *</label>
+            <input type="text" id="rvName" placeholder="e.g. Ramesh Kumar" maxlength="60" autocomplete="name" />
+          </div>
+
+          <div class="review-field">
+            <label>Rating *</label>
+            <div class="star-picker" id="starPicker" role="radiogroup" aria-label="Rating">
+              <span class="star-pick" data-val="1" aria-label="1 star">★</span>
+              <span class="star-pick" data-val="2" aria-label="2 stars">★</span>
+              <span class="star-pick" data-val="3" aria-label="3 stars">★</span>
+              <span class="star-pick" data-val="4" aria-label="4 stars">★</span>
+              <span class="star-pick" data-val="5" aria-label="5 stars">★</span>
+            </div>
+          </div>
+
+          <div class="review-field">
+            <label for="rvText">Your Review *</label>
+            <textarea id="rvText" rows="3" placeholder="Tell others about your experience…" maxlength="500"></textarea>
+          </div>
+
+          <button class="btn btn-primary btn-full" id="rvSubmitBtn" type="button">
+            <i class="fa-solid fa-paper-plane"></i> Submit Review
+          </button>
+
+          <div class="rv-msg rv-msg--success hidden" id="rvSuccess">
+            <i class="fa-solid fa-circle-check"></i>
+            Review submitted! It'll appear after approval. Thank you!
+          </div>
+          <div class="rv-msg rv-msg--error hidden" id="rvError">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            Something went wrong. Please try again.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
   <footer class="footer">
     <div class="container footer-inner">
       <div class="footer-logo">
@@ -606,5 +712,145 @@
 
   <script src="js/app.js"></script>
   <script src="js/sw-register.js"></script>
+  <script>
+  /* ============================================================
+     MAYA MART — Review System
+     Sheet: Name(A) | Review(B) | Rating(C) | Approved(D) | Timestamp(E)
+     Sheet ID: 1xulOs9260bRMmtu01dGe92g71JJ2VPamPObIpW3tXog
+     Submit via: Google Apps Script web app (set SCRIPT_URL below)
+     ============================================================ */
+
+  const REVIEW_SHEET_ID   = '1xulOs9260bRMmtu01dGe92g71JJ2VPamPObIpW3tXog';
+  // ↓ Paste your deployed Apps Script URL here after deploying
+  const REVIEW_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
+
+  /* ---- Load & display approved reviews ---- */
+  async function loadReviews() {
+    const grid = document.getElementById('reviewsGrid');
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${REVIEW_SHEET_ID}/gviz/tq?tqx=out:json&sheet=Sheet1&nocache=${Date.now()}`;
+      const res  = await fetch(url);
+      const text = await res.text();
+      const json = JSON.parse(text.replace(/^[^\(]*\(/, '').replace(/\);\s*$/, ''));
+      const rows = json.table ? json.table.rows : [];
+
+      // Filter approved (col D = TRUE / "TRUE" / "true")
+      const approved = rows.filter(r => {
+        const d = r.c && r.c[3] && r.c[3].v;
+        return d === true || String(d).toUpperCase() === 'TRUE';
+      });
+
+      if (!approved.length) {
+        grid.innerHTML = `<div class="review-empty">No reviews yet — be the first! ⭐</div>`;
+        return;
+      }
+
+      // Average rating
+      let totalStars = 0;
+      approved.forEach(r => { totalStars += (r.c && r.c[2] ? Number(r.c[2].v) || 0 : 0); });
+      const avg = (totalStars / approved.length).toFixed(1);
+      const avgWrap = document.getElementById('reviewAvgWrap');
+      document.getElementById('reviewAvgStars').textContent = renderStars(Math.round(avg));
+      document.getElementById('reviewAvgText').textContent  = `${avg} / 5 · ${approved.length} review${approved.length === 1 ? '' : 's'}`;
+      avgWrap.classList.remove('hidden');
+
+      // Render cards (newest first)
+      grid.innerHTML = approved.reverse().map(r => {
+        const name      = escHtmlR(r.c && r.c[0] ? String(r.c[0].v || '') : 'Anonymous');
+        const review    = escHtmlR(r.c && r.c[1] ? String(r.c[1].v || '') : '');
+        const rating    = r.c && r.c[2] ? Number(r.c[2].v) || 0 : 0;
+        const timestamp = r.c && r.c[4] ? r.c[4].f || '' : '';
+        return `
+          <div class="review-card">
+            <div class="review-card-stars">${renderStars(rating)}</div>
+            <p class="review-card-text">"${review}"</p>
+            <div class="review-card-name">— ${name}</div>
+            ${timestamp ? `<div class="review-card-date">${timestamp}</div>` : ''}
+          </div>`;
+      }).join('');
+
+    } catch(e) {
+      console.error('Reviews load error:', e);
+      grid.innerHTML = `<div class="review-empty">Could not load reviews. Please try again later.</div>`;
+    }
+  }
+
+  function renderStars(n) {
+    const full  = Math.min(Math.max(Math.round(n), 0), 5);
+    return '★'.repeat(full) + '☆'.repeat(5 - full);
+  }
+
+  function escHtmlR(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  /* ---- Star picker ---- */
+  let selectedRating = 0;
+  document.querySelectorAll('.star-pick').forEach(star => {
+    const val = Number(star.dataset.val);
+
+    star.addEventListener('mouseenter', () => {
+      document.querySelectorAll('.star-pick').forEach(s => {
+        s.classList.toggle('hover', Number(s.dataset.val) <= val);
+      });
+    });
+    star.addEventListener('mouseleave', () => {
+      document.querySelectorAll('.star-pick').forEach(s => {
+        s.classList.remove('hover');
+        s.classList.toggle('active', Number(s.dataset.val) <= selectedRating);
+      });
+    });
+    star.addEventListener('click', () => {
+      selectedRating = val;
+      document.querySelectorAll('.star-pick').forEach(s => {
+        s.classList.toggle('active', Number(s.dataset.val) <= selectedRating);
+      });
+    });
+  });
+
+  /* ---- Submit review ---- */
+  document.getElementById('rvSubmitBtn').addEventListener('click', async () => {
+    const name   = document.getElementById('rvName').value.trim();
+    const review = document.getElementById('rvText').value.trim();
+    const rating = selectedRating;
+    const success = document.getElementById('rvSuccess');
+    const error   = document.getElementById('rvError');
+    const btn     = document.getElementById('rvSubmitBtn');
+
+    success.classList.add('hidden');
+    error.classList.add('hidden');
+
+    if (!name || !review || !rating) {
+      error.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Please fill in your name, rating, and review.';
+      error.classList.remove('hidden');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting…';
+
+    try {
+      const params = new URLSearchParams({ name, review, rating, timestamp: new Date().toLocaleString('en-IN') });
+      const res = await fetch(`${REVIEW_SCRIPT_URL}?${params}`, { method: 'GET', mode: 'no-cors' });
+      // no-cors means we can't read response — assume success if no network error
+      success.classList.remove('hidden');
+      document.getElementById('rvName').value  = '';
+      document.getElementById('rvText').value  = '';
+      selectedRating = 0;
+      document.querySelectorAll('.star-pick').forEach(s => s.classList.remove('active'));
+    } catch(e) {
+      error.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> Something went wrong. Please try again.';
+      error.classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Review';
+    }
+  });
+
+  /* ---- Init ---- */
+  loadReviews();
+  </script>
 </body>
 </html>
